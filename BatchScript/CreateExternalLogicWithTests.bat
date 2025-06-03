@@ -24,6 +24,11 @@ cd %ProjectName%
 dotnet add package OutSystems.ExternalLibraries.SDK
 cd ..
 
+set "TestProjectName=%ProjectName%.Tests"
+dotnet new xunit -o %TestProjectName%
+dotnet sln add .\%TestProjectName%\%TestProjectName%.csproj
+dotnet add .\%TestProjectName%\%TestProjectName%.csproj reference .\%ProjectName%\%ProjectName%.csproj
+
 echo Setup complete.
 goto :eof
 
