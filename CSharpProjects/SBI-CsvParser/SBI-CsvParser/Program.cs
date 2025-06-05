@@ -21,19 +21,80 @@ class Program
             switch (processType.ToLower())
             {
                 case "parse":
-                    if (parameter1 == null)
+                    if (string.IsNullOrEmpty(parameter1))
                     {
                         Console.WriteLine("Please provide a file path for the 'parse' process.");
                         return;
                     }
 
-                    // Read the file with Shift-JIS encoding
+                    // Read all lines with Shift-JIS encoding
                     Encoding shiftJis = Encoding.GetEncoding("shift_jis");
-                    string text = File.ReadAllText(parameter1, shiftJis);
+                    string[] lines = File.ReadAllLines(parameter1, shiftJis);
+                    if (lines.Length == 0)
+                    {
+                        Console.WriteLine("The file is empty.");
+                        return;
+                    }
 
-                    // Print the text to the console
-                    Console.WriteLine("Parsed Content:");
-                    Console.WriteLine(text);
+                    // Define the output columns
+                    string[] outputHeaders = new string[] { "口座", "ファンド名", "保有口数", "取得単価", "基準価額", "取得金額", "評価額", "評価損益" };
+                    var outputRows = new List<string>();
+                    outputRows.Add(string.Join(",", outputHeaders));
+
+                    // For each section, find the header and extract data rows
+                    Dictionary<string, int>? colMap = null;
+                    string currentCategory = "";
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        var line = lines[i].Trim();
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        var cols = line.Split(',');
+                        // Detect section header (カテゴリ)
+                        if (line.Contains("/"))
+                        {
+                            currentCategory = line.Replace(",", "").Trim();
+                            continue;
+                        }
+                        // Detect table header
+                        if (cols.Contains("ファンド名") && cols.Contains("評価損益"))
+                        {
+                            colMap = new Dictionary<string, int>();
+                            for (int c = 0; c < cols.Length; c++)
+                            {
+                                colMap[cols[c].Trim()] = c;
+                            }
+                            continue;
+                        }
+                        // Data row
+                        if (colMap != null && cols.Length >= colMap.Count && !line.StartsWith("\""))
+                        {
+                            // skip summary rows or non-data rows
+                            continue;
+                        }
+                        if (colMap != null && cols.Length >= colMap.Count)
+                        {
+                            // Extract columns by header name
+                            string[] row = new string[outputHeaders.Length];
+                            row[0] = currentCategory; // Now represents 口座
+                            row[1] = colMap.ContainsKey("ファンド名") ? cols[colMap["ファンド名"]] : "";
+                            row[2] = colMap.ContainsKey("保有口数") ? cols[colMap["保有口数"]] : "";
+                            row[3] = colMap.ContainsKey("取得単価") ? cols[colMap["取得単価"]] : "";
+                            row[4] = colMap.ContainsKey("基準価額") ? cols[colMap["基準価額"]] : "";
+                            row[5] = colMap.ContainsKey("取得金額") ? cols[colMap["取得金額"]] : "";
+                            row[6] = colMap.ContainsKey("評価額") ? cols[colMap["評価額"]] : "";
+                            row[7] = colMap.ContainsKey("評価損益") ? cols[colMap["評価損益"]] : "";
+                            outputRows.Add(string.Join(",", row));
+                        }
+                    }
+
+                    // Write organized CSV to a new file with date in the filename
+                    string dateStr = DateTime.Now.ToString("yyyyMMdd");
+                    string organizedFilePath = Path.Combine(
+                        Path.GetDirectoryName(parameter1) ?? string.Empty,
+                        Path.GetFileNameWithoutExtension(parameter1) + $".organized.{dateStr}.csv"
+                    );
+                    File.WriteAllLines(organizedFilePath, outputRows, shiftJis);
+                    Console.WriteLine($"Organized CSV saved as: {organizedFilePath}");
                     break;
 
                 case "convert-to-utf8":
