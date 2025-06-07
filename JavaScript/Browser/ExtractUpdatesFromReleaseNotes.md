@@ -53,6 +53,12 @@ console.log(result);
 ```
 
 # Converting the result to CSV
+## How to use this code
+1. After running the first code snippet, copy and paste the code snippet below into the console.
+2. Press Enter to run the code.
+3. The CSV string will be logged to the console.
+## Code Snippet
+
 ``` javascript
 const csvRows = [];
 // Add header row
